@@ -18,70 +18,148 @@ def main():
         while inpt == 'a' or inpt == 'A' or 'r' or inpt == 'R' or inpt == 'l' or inpt == 'L' or 'e' or inpt == 'E' or 'x' or inpt == 'X':
         
             if inpt == 'a' or inpt == 'A':
-                cname, cphone, cemail = add_contact()
-                query = "INSERT INTO contacts(cname,cphone,cemail) " \
-                        "VALUES(%s,%s,%s)"
-                args = (cname,cphone,cemail)
+                uname, cname, cphone, cemail = add_contact()
 
-                cursor.execute(query,args)
+                query = "SELECT uid FROM users " \
+                        "WHERE uname=%s"
+                cursor.execute(query, (uname,))
+                userid = cursor.fetchone()
+                
+                
+                if userid != None: #Directly creates contact when the user already exists
+                    userid = int(userid[0])
+                
+                    query = "INSERT INTO contacts(uid,cname,cphone,cemail) " \
+                            "VALUES(%s,%s,%s,%s)"
+                    args = (userid,cname,cphone,cemail)
 
-                conn.commit()
+                    cursor.execute(query,args)
 
-                print('\nContact added.')
+                    conn.commit()
 
+                    print('\nContact added.')
+
+                else: #First creates the user and then creates contact when user doesn't exist
+                    query = "INSERT INTO users(uname) " \
+                            "VALUES(%s)"
+                    
+                    cursor.execute(query,(uname,))
+
+                    conn.commit()
+
+                    query = "SELECT uid FROM users " \
+                        "WHERE uname=%s"
+                    cursor.execute(query, (uname,))
+                    userid = cursor.fetchone()
+
+                    userid = int(userid[0])
+
+                    query = "INSERT INTO contacts(uid,cname,cphone,cemail) " \
+                            "VALUES(%s,%s,%s,%s)"
+                    args = (userid,cname,cphone,cemail)
+
+                    cursor.execute(query,args)
+
+                    conn.commit()
+
+                    print('\nContact added.')
+
+            #needs changes in WHERE clause
             elif inpt == 'r' or inpt == 'R':
-                cname = rem_contact()
+                uid,cname = edit_contact()
                 query = "DELETE FROM contacts WHERE cname = %s"
 
                 cursor.execute(query, (cname,))
-
                 conn.commit()
 
                 print('\nContact removed.')
 
             elif inpt == 'l' or inpt == 'L':
-                query = "SELECT * FROM contacts " \
-                        "ORDER BY cname"
-                cursor.execute(query)
-                rows = cursor.fetchall()
+                uname = list_contact()
 
-                print("\n\nList Of All Contacts:")
-                for row in rows:
-                    print('\nName:',row[0])
-                    
-                    phones = row[1].split(' ')
-                    print('Phone(s):')
-                    for num in phones:
-                        print(num)
+                query = "SELECT uid FROM users " \
+                        "WHERE uname=%s"
+                cursor.execute(query, (uname,))
+                userid = cursor.fetchone()
+                
+                if userid != None: 
+                    userid = int(userid[0])
+                    #print(userid)
+                    print(uname+"'s contacts:")
+                
+                    query = """SELECT cname,cphone,cemail
+                            FROM contacts
+                            WHERE uid=%s
+                            ORDER BY cname ASC"""
+                    cursor.execute(query,(userid,))
+                    rows = cursor.fetchall()
+                    print('hi')
+
+                    print("\n\nList Of All Contacts:")
+                    for row in rows:
+                        print('\nName:',row[0])
                         
-                    emails = row[2].split(' ')
-                    print('Email(s):')
-                    for email in emails:
-                        print(email)
+                        phones = row[1].split(' ')
+                        print('Phone(s):')
+                        for num in phones:
+                            print(num)
+                            
+                        emails = row[2].split(' ')
+                        print('Email(s):')
+                        for email in emails:
+                            print(email)
+
+                else:
+                    print(uname, "doesn't have any contacts.")
 
             elif inpt == 'e' or inpt == 'E':
-                cname = edit_contact()
-                query = "SELECT cname, cphone, cemail FROM contacts " \
-                        "WHERE cname = %s"
-                cursor.execute(query, (cname,))
-                row = cursor.fetchone()
+                uname,cname = edit_contact()
+                query = """SELECT uid FROM users
+                        WHERE uname=%s"""
+                cursor.execute(query, (uname,))
+                userid = cursor.fetchone()
 
-                print('Current Contact:', row[0], row[1], row[2])
-
-                temp = cname
-                cname = input('Enter new name: ')
-                cphone = input('Enter new phone: ')
-                cemail = input('Enter new email: ')
-
-                query = "UPDATE contacts " \
-                        "SET cname=%s, cphone=%s, cemail=%s" \
-                        "WHERE cname=%s"
+                if userid != None: 
+                    userid = int(userid[0])
                 
-                cursor.execute(query, (cname,cphone,cemail,temp,))
+                    query = """SELECT cname, cphone, cemail FROM contacts
+                            WHERE uid = %s and cname=%s"""
+                    cursor.execute(query, (userid,cname,))
+                    row = cursor.fetchone()
 
-                conn.commit()
+                    print('Current Contact:', row[0],row[1],row[2])
 
-                print('\nContact updated!')
+                    temp = userid
+                    print(temp)
+                    temp_cname = input('Enter new name: ')
+                    cphone = input('Enter new phone: ')
+                    cemail = input('Enter new email: ')
+
+
+                    print(temp_cname,cphone,cemail,str(temp),cname)
+                    
+##                    query = """UPDATE contacts
+##                            SET cname={}, cphone={}, cemail={}
+##                            WHERE uid={} and cname={}""".format(temp_cname,cphone,cemail,str(temp),cname)
+##                
+##                    cursor.execute(query)
+
+                    query = "DELETE FROM contacts WHERE uid=%s and cname=%s"
+                    cursor.execute(query,(str(temp),cname))
+                    conn.commit()
+
+                    query = """INSERT INTO contacts(uid,cname,cphone,cemail)
+                            VALUES(%s,%s,%s,%s)"""
+                    cursor.execute(query,(str(temp),temp_cname,cphone,cemail))
+
+                    conn.commit()
+
+
+
+                    print('\nContact updated!')
+
+                else:
+                    print(uname, "doesn't have any contacts.")
 
             else:
                 print('\nExiting app...')
@@ -112,24 +190,21 @@ def header_input():
 
 
 def add_contact():
-    print("Enter contact name: ")
-    cname = input()
-    print("Enter contact phone(s) (If there's more than 1 enter them seperated by a space): ")
-    cphone = input()
-    print("Enter contact email(s) (If there's more than 1 enter them seperated by a space): ")
-    cemail = input()
-    return cname, cphone, cemail
+    uname = input("Who's the user?")
+    cname = input("Enter contact name: ")
+    cphone = input("Enter contact phone(s) (If there's more than 1 enter them seperated by a space): ")
+    cemail = input("Enter contact email(s) (If there's more than 1 enter them seperated by a space): ")
+    return uname, cname, cphone, cemail
 
 
-def rem_contact():
-    print("Enter the contact name to be removed")
-    cname = input()
-    return cname
-
+def list_contact():
+    uname = input("Enter whose contacts are to be displayed")
+    return uname
 
 def edit_contact():
-    name = input("Enter the name of the contact to be edited: ")
-    return name
+    uname = input("Enter user name whose contact is to be edited: ")
+    cname = input("Enter name of the contact to be edited: ")
+    return uname,cname
     
 
 if __name__ == '__main__':
