@@ -1,75 +1,98 @@
 
-import mysql.connector
-from mysql.connector import MySQLConnection, Error
 
+import sqlite3
+from sqlite3 import Error
 
 
 def main():
     inpt = header_input()
 
     try:
-        conn = mysql.connector.connect(host='localhost',
-                                       database='contacts_manager',
-                                       user='root',
-                                       password='Powerstar1')
-
+        conn = sqlite3.connect('contacts_manager.db')  
         cursor = conn.cursor()
+        print('PRINTING FROM SQLITE3, YAYYY!!!')
 
         while inpt == 'a' or inpt == 'A' or 'r' or inpt == 'R' or inpt == 'l' or inpt == 'L' or 'e' or inpt == 'E' or 'x' or inpt == 'X':
         
             if inpt == 'a' or inpt == 'A':
                 uname, cname, cphone, cemail = add_contact()
 
-                query = "SELECT uid FROM users " \
-                        "WHERE uname=%s"
-                cursor.execute(query, (uname,))
+                print(uname, cname, cphone, cemail)
+
+                query1 = """SELECT uid FROM users
+                        WHERE uname="{}"
+                        """.format(uname)
+                cursor.execute(query1)
+                
                 userid = cursor.fetchone()
-                
-                
-                if userid != None: #Directly creates contact when the user already exists
-                    userid = int(userid[0])
-                
-                    query = "INSERT INTO contacts(uid,cname,cphone,cemail) " \
-                            "VALUES(%s,%s,%s,%s)"
-                    args = (userid,cname,cphone,cemail)
+                #userid = int(userid[0])
+                #if type(userid) == int:
 
-                    cursor.execute(query,args)
 
-                    conn.commit()
 
-                    print('\nContact added.')
 
-                else: #First creates the user and then creates contact when user doesn't exist
-                    query = "INSERT INTO users(uname) " \
-                            "VALUES(%s)"
+
+                if userid == None: #First creates the user and then creates contact when user doesn't exist
                     
-                    cursor.execute(query,(uname,))
+                    
+                    cursor.execute('''INSERT INTO users(uname)
+                            VALUES('{}')
+                            '''.format(uname))
 
                     conn.commit()
+                    print('inserted to users')
 
-                    query = "SELECT uid FROM users " \
-                        "WHERE uname=%s"
-                    cursor.execute(query, (uname,))
+                    query = """SELECT uid FROM users
+                            WHERE uname="{}"
+                            """.format(uname)
+                    cursor.execute(query)
                     userid = cursor.fetchone()
 
                     userid = int(userid[0])
 
-                    query = "INSERT INTO contacts(uid,cname,cphone,cemail) " \
-                            "VALUES(%s,%s,%s,%s)"
-                    args = (userid,cname,cphone,cemail)
+                    query = """INSERT INTO contacts(uid,cname,cphone,cemail)
+                            VALUES('{}','{}','{}','{}')""".format(userid,cname,cphone,cemail)
+                    
 
-                    cursor.execute(query,args)
+                    cursor.execute(query)
 
                     conn.commit()
 
                     print('\nContact added.')
 
+
+
+
+
+
+
+
+
+                
+                    
+                
+                elif type(userid[0]) == int: #Directly creates contact when the user already exists
+                    userid = int(userid[0])
+                    print('now in if conditin')
+                    
+                    query = """INSERT INTO contacts(uid,cname,cphone,cemail)
+                            VALUES('{}','{}','{}','{}')
+                            """.format(userid,cname,cphone,cemail)
+
+                    cursor.execute(query)
+
+                    conn.commit()
+
+                    print('\nContact added.')
+
+                
+
             #needs changes in WHERE clause
             elif inpt == 'r' or inpt == 'R':
                 uid,cname = edit_contact()
-                query = "DELETE FROM contacts WHERE cname = %s"
+                query = "DELETE FROM contacts WHERE cname = {}".format(cname)
 
-                cursor.execute(query, (cname,))
+                cursor.execute(query)
                 conn.commit()
 
                 print('\nContact removed.')
@@ -77,9 +100,9 @@ def main():
             elif inpt == 'l' or inpt == 'L':
                 uname = list_contact()
 
-                query = "SELECT uid FROM users " \
-                        "WHERE uname=%s"
-                cursor.execute(query, (uname,))
+                query = """SELECT uid FROM users
+                        WHERE uname={}""".format(uname)
+                cursor.execute(query)
                 userid = cursor.fetchone()
                 
                 if userid != None: 
@@ -89,9 +112,9 @@ def main():
                 
                     query = """SELECT cname,cphone,cemail
                             FROM contacts
-                            WHERE uid=%s
-                            ORDER BY cname ASC"""
-                    cursor.execute(query,(userid,))
+                            WHERE uid={}
+                            ORDER BY cname ASC""".format(userid)
+                    cursor.execute(query)
                     rows = cursor.fetchall()
                     print('hi')
 
@@ -115,16 +138,16 @@ def main():
             elif inpt == 'e' or inpt == 'E':
                 uname,cname = edit_contact()
                 query = """SELECT uid FROM users
-                        WHERE uname=%s"""
-                cursor.execute(query, (uname,))
+                        WHERE uname={}""".format(uname)
+                cursor.execute(query)
                 userid = cursor.fetchone()
 
                 if userid != None: 
                     userid = int(userid[0])
                 
                     query = """SELECT cname, cphone, cemail FROM contacts
-                            WHERE uid = %s and cname=%s"""
-                    cursor.execute(query, (userid,cname,))
+                            WHERE uid = {} and cname={}""".format(userid,cname)
+                    cursor.execute(query)
                     row = cursor.fetchone()
 
                     print('Current Contact:', row[0],row[1],row[2])
@@ -144,13 +167,13 @@ def main():
 ##                
 ##                    cursor.execute(query)
 
-                    query = "DELETE FROM contacts WHERE uid=%s and cname=%s"
-                    cursor.execute(query,(str(temp),cname))
+                    query = "DELETE FROM contacts WHERE uid={} and cname={}".format(str(temp),cname)
+                    cursor.execute(query)
                     conn.commit()
 
                     query = """INSERT INTO contacts(uid,cname,cphone,cemail)
-                            VALUES(%s,%s,%s,%s)"""
-                    cursor.execute(query,(str(temp),temp_cname,cphone,cemail))
+                            VALUES({},{},{})""".format(str(temp),temp_cname,cphone,cemail)
+                    cursor.execute(query)
 
                     conn.commit()
 
@@ -171,7 +194,7 @@ def main():
             print("It's not a valid option. Try again!")
             
     except Error as e:
-        print(e)
+        print("Error:",e)
  
     finally:
         cursor.close()
