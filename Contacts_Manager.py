@@ -77,7 +77,7 @@ def main():
                 userid = cursor.fetchone()
 
                 if userid == None:
-                    print(uname, "doesn't have any contacts.")
+                    print('\n'+uname, "doesn't have any contacts.")
 
                 else:
                     userid = int(userid[0])
@@ -150,8 +150,8 @@ def main():
 
                     temp = userid
                     temp_cname = input('\nEnter new name: ')
-                    cphone = input('\nEnter new phone: ')
-                    cemail = input('\nEnter new email: ')
+                    cphone = input("\nEnter new phone (If there's more than 1, enter them seperated by a space): ")
+                    cemail = input("\nEnter new email (If there's more than 1, enter them seperated by a space): ")
 
 
                     
@@ -187,7 +187,7 @@ def main():
         conn.close()
 
 def header_input():
-    print('\n\n\n************CONTACT MANAGER************')
+    print('\n\n\n************CONTACTS MANAGER************')
     print('\n\nOPTIONS:')
     print('\nEnter (A) to Add a contact')
     print('\nEnter (R) to Remove a contact')
